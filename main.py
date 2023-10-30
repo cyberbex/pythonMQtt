@@ -1,30 +1,43 @@
+import random
 
-import time
+from paho.mqtt import client as mqtt_client
 
-import paho.mqtt.client as mqttclient
-
-connected = False
-broker_adress = "m15.cloudmqtt.com"
+broker = 'm15.cloudmqtt.com'
 port = 13750
-user = "xinuxccp"
-password = "bWpTqG0Nh5GX"
+topic = "python/mqtt"
+# Generate a Client ID with the subscribe prefix.
+client_id = f'subscribe-{random.randint(0, 100)}'
+username = 'xinuxccp'
+password = 'bWpTqG0Nh5GX'
 
 
-def on_connect(client, usedata, flags, rc):
-    if rc == 0:
-        print("client is connected")
-        global connected
-        connected = True
-    else:
-        print("connection failed")
+def connect_mqtt() -> mqtt_client:
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print("Connected to MQTT Broker!")
+        else:
+            print("Failed to connect, return code %d\n", rc)
+
+    client = mqtt_client.Client(client_id)
+    client.username_pw_set(username, password)
+    client.on_connect = on_connect
+    client.connect(broker, port)
+    return client
 
 
-client = mqttclient.Client("MQTT")
-client.username_pw_set(user, password=password)
-client.on_connect = on_connect
-client.connect(broker_adress, port=port)
-client.loop_start()
-while connected != True:
-    time.sleep(0.2)
-client.publish("mqtt/firstcode", "hello MQtt")
-client.loop_stop()
+def subscribe(client: mqtt_client):
+    def on_message(client, userdata, msg):
+        print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+
+    client.subscribe(topic)
+    client.on_message = on_message
+
+
+def run():
+    client = connect_mqtt()
+    subscribe(client)
+    client.loop_forever()
+
+
+if __name__ == '__main__':
+    run()
